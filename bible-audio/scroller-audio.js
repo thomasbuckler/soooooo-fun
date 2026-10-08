@@ -32,7 +32,7 @@ async function start() {
   const audioRoot = new URL(document.querySelector('meta[name="bible-audio-base"]')?.content || '../', root);
   const style = document.createElement('link');
   style.rel = 'stylesheet';
-  style.href = new URL('scroller-audio.css?v=audio-dial-5', root).href;
+  style.href = new URL('scroller-audio.css?v=menu-6', root).href;
   document.head.append(style);
 
   const status = document.createElement('p');
@@ -110,41 +110,111 @@ async function start() {
     else if (state.phase === 'missing') announce('No recording for this verse.');
     else announce('');
   }
+  // One menu button replaces each header's icon row. Its drop-down shows the
+  // row's own buttons (Home, book and chapter, Favorites) followed by the
+  // audio clock and speaker.
+  const menuIcon = icon('<path d="M4 6h16M4 12h16M4 18h16"/>');
+  let menu = null;
+  let swallowClickUntil = 0;
+  function closeMenu() {
+    if (!menu) return;
+    menu.panel.remove();
+    menu.toggle.setAttribute('aria-expanded', 'false');
+    menu = null;
+    paint();
+  }
+  function openMenu(toggle, row) {
+    closeMenu();
+    const panel = document.createElement('div');
+    panel.dataset.bibleMenu = '';
+    panel.setAttribute('aria-label', 'Menu');
+    for (const original of row.querySelectorAll(':scope > button')) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.dataset.bibleMenuItem = '';
+      item.setAttribute('aria-label', original.getAttribute('aria-label') || '');
+      item.title = original.title || original.getAttribute('aria-label') || '';
+      item.disabled = original.disabled;
+      item.innerHTML = original.querySelector('svg')?.outerHTML || '';
+      item.addEventListener('click', () => { closeMenu(); original.click(); });
+      panel.append(item);
+    }
+    const group = makeAudioControls();
+    panel.append(group);
+    controls.add(group);
+    const box = toggle.getBoundingClientRect();
+    panel.style.top = `${box.bottom}px`;
+    panel.style.right = `${document.documentElement.clientWidth - box.right}px`;
+    document.body.append(panel);
+    toggle.setAttribute('aria-expanded', 'true');
+    menu = { panel, toggle };
+    paint();
+  }
+  // A tap outside the open menu only closes it; it does not also save a
+  // verse or press whatever is underneath.
+  document.addEventListener('pointerdown', event => {
+    if (!menu || menu.panel.contains(event.target) || menu.toggle.contains(event.target)) return;
+    closeMenu();
+    swallowClickUntil = performance.now() + 600;
+  }, { capture: true });
+  document.addEventListener('click', event => {
+    if (performance.now() > swallowClickUntil) return;
+    swallowClickUntil = 0;
+    event.preventDefault();
+    event.stopPropagation();
+  }, { capture: true });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
+  window.addEventListener('resize', closeMenu);
   function mountControls() {
+    if (menu && !visible(menu.toggle)) closeMenu();
     for (const header of document.querySelectorAll('header')) {
-      if (!visible(header) || header.querySelector('[data-bible-audio-controls]')) continue;
-      // Reuse the existing top-right book/favorites cluster in every view.
+      if (!visible(header) || header.querySelector('[data-bible-menu-toggle]')) continue;
+      // The existing top-right Home/book/Favorites row in every view.
       const bookButton = header.querySelector('button[aria-label="Choose book and chapter"]');
-      const target = bookButton?.parentElement;
-      if (!target) continue;
-      target.dataset.bibleIconToolbar = '';
-      const group = document.createElement('span');
-      group.dataset.bibleAudioControls = '';
-      const sound = document.createElement('button');
-      const timer = document.createElement('button');
-      for (const button of [sound, timer]) {
-        button.type = 'button';
-        button.dataset.bibleAudioControl = '';
-      }
-      timer.innerHTML = clock;
-      sound.addEventListener('click', () => {
-        if (!player) return;
-        activateAudio();
-        if (state.phase === 'blocked' || state.phase === 'error') {
-          player.setMuted(false);
-        } else player.setMuted(!state.muted);
-        try { localStorage.setItem('holy-scroller-audio-muted', String(player.snapshot().muted)); } catch {}
+      const row = bookButton?.parentElement;
+      if (!row) continue;
+      row.dataset.bibleIconToolbar = '';
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.dataset.bibleMenuToggle = '';
+      toggle.setAttribute('aria-label', 'Menu');
+      toggle.title = 'Menu';
+      toggle.setAttribute('aria-haspopup', 'true');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.innerHTML = menuIcon;
+      toggle.addEventListener('click', () => {
+        if (menu?.toggle === toggle) closeMenu();
+        else openMenu(toggle, row);
       });
-      timer.addEventListener('click', () => {
-        if (!player) return;
-        activateAudio();
-        player.setAuto(!state.auto);
-      });
-      group.append(timer, sound);
-      target.append(group);
-      controls.add(group);
+      row.after(toggle);
     }
     paint();
+  }
+  function makeAudioControls() {
+    const group = document.createElement('span');
+    group.dataset.bibleAudioControls = '';
+    const sound = document.createElement('button');
+    const timer = document.createElement('button');
+    for (const button of [sound, timer]) {
+      button.type = 'button';
+      button.dataset.bibleAudioControl = '';
+    }
+    timer.innerHTML = clock;
+    sound.addEventListener('click', () => {
+      if (!player) return;
+      activateAudio();
+      if (state.phase === 'blocked' || state.phase === 'error') {
+        player.setMuted(false);
+      } else player.setMuted(!state.muted);
+      try { localStorage.setItem('holy-scroller-audio-muted', String(player.snapshot().muted)); } catch {}
+    });
+    timer.addEventListener('click', () => {
+      if (!player) return;
+      activateAudio();
+      player.setAuto(!state.auto);
+    });
+    group.append(timer, sound);
+    return group;
   }
   function sync() {
     frame = 0;

@@ -1,39 +1,47 @@
-[data-bible-icon-toolbar] { gap: 0; }
-[data-bible-icon-toolbar] > * { margin-inline: 0; }
-[data-bible-icon-toolbar] > button,
-[data-bible-audio-control] {
-  /* A 20px graphic in each 30px slot leaves a 10px gap. */
-  width: 30px;
-  height: 2.75rem;
-  flex: 0 0 30px;
-}
-[data-bible-icon-toolbar] svg { width: 20px; height: 20px; flex-shrink: 0; }
-[data-bible-audio-controls] {
+/* Each header's icon row (Home, book and chapter, Favorites) is reached
+   through the menu button, whose drop-down adds the clock and speaker. */
+[data-bible-icon-toolbar] { display: none !important; }
+[data-bible-menu-toggle],
+[data-bible-menu] button {
   display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  margin-left: 0 !important;
-  pointer-events: auto;
-}
-[data-bible-audio-control] {
-  display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
   border: 0;
   border-radius: 9999px;
   padding: 0;
   background: transparent;
-  color: #000;
   opacity: 1;
   cursor: pointer;
+  pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
 }
+/* The same gray as the verse numbers. */
+[data-bible-menu-toggle] { color: var(--color-muted, #8a8a8a); }
+[data-bible-menu] button { color: #000; }
+[data-bible-menu] [data-bible-menu-item]:disabled { opacity: .3; cursor: default; }
+[data-bible-menu-toggle] svg,
+[data-bible-menu] svg { width: 20px; height: 20px; flex-shrink: 0; pointer-events: none; }
+[data-bible-menu-toggle]:focus-visible,
+[data-bible-menu] button:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }
+[data-bible-menu] {
+  position: fixed;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-block: .25rem;
+  border-radius: 1.375rem;
+  background: var(--color-bg, #fff);
+  box-shadow: 0 4px 20px rgb(0 0 0 / .08);
+}
+[data-bible-menu] [data-bible-audio-controls] { display: contents; }
 [data-bible-audio-control]:hover,
 [data-bible-audio-control]:active,
 [data-bible-audio-control]:disabled { color: #000; opacity: 1; background: transparent; }
 [data-bible-audio-control]:disabled { cursor: default; }
-[data-bible-audio-control]:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }
-[data-bible-audio-control] svg { pointer-events: none; }
 #bible-audio-status {
   position: fixed;
   z-index: 60;
