@@ -32,7 +32,7 @@ async function start() {
   const audioRoot = new URL(document.querySelector('meta[name="bible-audio-base"]')?.content || '../', root);
   const style = document.createElement('link');
   style.rel = 'stylesheet';
-  style.href = new URL('scroller-audio.css?v=home-7', root).href;
+  style.href = new URL('scroller-audio.css?v=home-8', root).href;
   document.head.append(style);
 
   const status = document.createElement('p');

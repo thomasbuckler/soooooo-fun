@@ -64,3 +64,5 @@
   pointer-events: none;
 }
 #bible-audio-status:empty { display: none; }
+/* Home page: half the usual 28px gap between the book and heart icons. */
+[data-bible-header-item] + [data-bible-header-item] { margin-left: -14px; }
