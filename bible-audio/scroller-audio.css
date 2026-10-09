@@ -2,6 +2,7 @@
    through the menu button, whose drop-down adds the clock and speaker. */
 [data-bible-icon-toolbar] { display: none !important; }
 [data-bible-menu-toggle],
+[data-bible-header-item],
 [data-bible-menu] button {
   display: inline-flex;
   flex: 0 0 auto;
@@ -20,11 +21,15 @@
 }
 /* The same gray as the verse numbers. */
 [data-bible-menu-toggle] { color: var(--color-muted, #8a8a8a); }
-[data-bible-menu] button { color: #000; }
+[data-bible-menu] button,
+[data-bible-header-item] { color: #000; }
+[data-bible-header-item]:disabled { opacity: .3; cursor: default; }
 [data-bible-menu] [data-bible-menu-item]:disabled { opacity: .3; cursor: default; }
 [data-bible-menu-toggle] svg,
+[data-bible-header-item] svg,
 [data-bible-menu] svg { width: 20px; height: 20px; flex-shrink: 0; pointer-events: none; }
 [data-bible-menu-toggle]:focus-visible,
+[data-bible-header-item]:focus-visible,
 [data-bible-menu] button:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }
 [data-bible-menu] {
   position: fixed;

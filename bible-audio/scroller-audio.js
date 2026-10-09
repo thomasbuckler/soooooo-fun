@@ -32,7 +32,7 @@ async function start() {
   const audioRoot = new URL(document.querySelector('meta[name="bible-audio-base"]')?.content || '../', root);
   const style = document.createElement('link');
   style.rel = 'stylesheet';
-  style.href = new URL('scroller-audio.css?v=menu-6', root).href;
+  style.href = new URL('scroller-audio.css?v=home-7', root).href;
   document.head.append(style);
 
   const status = document.createElement('p');
@@ -115,6 +115,7 @@ async function start() {
   // audio clock and speaker.
   const menuIcon = icon('<path d="M4 6h16M4 12h16M4 18h16"/>');
   let menu = null;
+  const besides = new Set();
   let swallowClickUntil = 0;
   function closeMenu() {
     if (!menu) return;
@@ -137,7 +138,7 @@ async function start() {
       item.disabled = original.disabled;
       item.innerHTML = original.querySelector('svg')?.outerHTML || '';
       item.addEventListener('click', () => { closeMenu(); original.click(); });
-      panel.append(item);
+      if (!original.hasAttribute('data-bible-beside')) panel.append(item);
     }
     const group = makeAudioControls();
     panel.append(group);
@@ -187,6 +188,25 @@ async function start() {
         else openMenu(toggle, row);
       });
       row.after(toggle);
+      // On the home page (no Home button) the book and chapter button sits
+      // next to the menu button instead of inside it.
+      if (!row.querySelector('button[aria-label="Home"]')) {
+        bookButton.dataset.bibleBeside = '';
+        const beside = document.createElement('button');
+        beside.type = 'button';
+        beside.dataset.bibleHeaderItem = '';
+        beside.setAttribute('aria-label', bookButton.getAttribute('aria-label'));
+        beside.title = bookButton.title || bookButton.getAttribute('aria-label');
+        beside.innerHTML = bookButton.querySelector('svg')?.outerHTML || '';
+        beside.addEventListener('click', () => { closeMenu(); bookButton.click(); });
+        toggle.before(beside);
+        besides.add([beside, bookButton]);
+      }
+    }
+    for (const pair of besides) {
+      const [beside, original] = pair;
+      if (!beside.isConnected) { besides.delete(pair); continue; }
+      if (beside.disabled !== original.disabled) beside.disabled = original.disabled;
     }
     paint();
   }
