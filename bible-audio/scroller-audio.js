@@ -138,7 +138,7 @@ async function start() {
       item.disabled = original.disabled;
       item.innerHTML = original.querySelector('svg')?.outerHTML || '';
       item.addEventListener('click', () => { closeMenu(); original.click(); });
-      if (!original.hasAttribute('data-bible-beside')) panel.append(item);
+      panel.append(item);
     }
     const group = makeAudioControls();
     panel.append(group);
@@ -169,12 +169,30 @@ async function start() {
   function mountControls() {
     if (menu && !visible(menu.toggle)) closeMenu();
     for (const header of document.querySelectorAll('header')) {
-      if (!visible(header) || header.querySelector('[data-bible-menu-toggle]')) continue;
+      if (!visible(header) || header.querySelector('[data-bible-menu-toggle],[data-bible-header-item]')) continue;
       // The existing top-right Home/book/Favorites row in every view.
       const bookButton = header.querySelector('button[aria-label="Choose book and chapter"]');
       const row = bookButton?.parentElement;
       if (!row) continue;
       row.dataset.bibleIconToolbar = '';
+      // The home page (no Home button) shows its book and Favorites buttons
+      // directly, without a menu.
+      if (!row.querySelector('button[aria-label="Home"]')) {
+        let last = row;
+        for (const original of row.querySelectorAll(':scope > button')) {
+          const beside = document.createElement('button');
+          beside.type = 'button';
+          beside.dataset.bibleHeaderItem = '';
+          beside.setAttribute('aria-label', original.getAttribute('aria-label') || '');
+          beside.title = original.title || original.getAttribute('aria-label') || '';
+          beside.innerHTML = original.querySelector('svg')?.outerHTML || '';
+          beside.addEventListener('click', () => original.click());
+          last.after(beside);
+          last = beside;
+          besides.add([beside, original]);
+        }
+        continue;
+      }
       const toggle = document.createElement('button');
       toggle.type = 'button';
       toggle.dataset.bibleMenuToggle = '';
@@ -188,20 +206,6 @@ async function start() {
         else openMenu(toggle, row);
       });
       row.after(toggle);
-      // On the home page (no Home button) the book and chapter button sits
-      // next to the menu button instead of inside it.
-      if (!row.querySelector('button[aria-label="Home"]')) {
-        bookButton.dataset.bibleBeside = '';
-        const beside = document.createElement('button');
-        beside.type = 'button';
-        beside.dataset.bibleHeaderItem = '';
-        beside.setAttribute('aria-label', bookButton.getAttribute('aria-label'));
-        beside.title = bookButton.title || bookButton.getAttribute('aria-label');
-        beside.innerHTML = bookButton.querySelector('svg')?.outerHTML || '';
-        beside.addEventListener('click', () => { closeMenu(); bookButton.click(); });
-        toggle.before(beside);
-        besides.add([beside, bookButton]);
-      }
     }
     for (const pair of besides) {
       const [beside, original] = pair;
