@@ -32,7 +32,7 @@ async function start() {
   const audioRoot = new URL(document.querySelector('meta[name="bible-audio-base"]')?.content || '../', root);
   const style = document.createElement('link');
   style.rel = 'stylesheet';
-  style.href = new URL('scroller-audio.css?v=home-8', root).href;
+  style.href = new URL('scroller-audio.css?v=read-9', root).href;
   document.head.append(style);
 
   const status = document.createElement('p');
@@ -71,7 +71,86 @@ async function start() {
   const soundOff = icon(`${speaker}<path d="m17 9 5 6m0-6-5 6"/>`);
   const clock = icon('<circle cx="12" cy="12" r="9"/><path data-audio-clock-hand d="M12 12V5"/>');
   const visible = element => Boolean(element?.isConnected && !element.closest('[aria-hidden="true"],.hidden') && element.getClientRects().length);
+  // Long-pressing a verse in chapter view reads it aloud and carries on
+  // through the rest of the chapter until the reader leaves the chapter.
+  let reading = null; // { view, book, chapter, verse }
+  const verseLabel = /^(?:Save|Remove) (.+) (\d+):(\d+)(?: from saved)?$/;
+  const chapterTitle = view => view.querySelector('header p')?.textContent;
+  function verseButton(view, verse) {
+    return [...view.querySelectorAll('button[aria-pressed]')].find(button => {
+      const match = button.getAttribute('aria-label')?.match(verseLabel);
+      return match && Number(match[3]) === verse;
+    });
+  }
+  function readingKey() {
+    if (!reading) return null;
+    if (!visible(reading.view) || chapterTitle(reading.view) !== `${reading.book} ${reading.chapter}`) {
+      stopReading();
+      return null;
+    }
+    return verseKey(`${reading.book} ${reading.chapter}:${reading.verse}`);
+  }
+  function markReading() {
+    document.querySelectorAll('[data-bible-reading]').forEach(button => button.removeAttribute('data-bible-reading'));
+    const button = reading && verseButton(reading.view, reading.verse);
+    if (!button) return;
+    button.dataset.bibleReading = '';
+    button.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  function stopReading() {
+    reading = null;
+    markReading();
+  }
+  function readNext() {
+    if (!reading) return;
+    if (!verseButton(reading.view, reading.verse + 1)) { stopReading(); requestSync(); return; }
+    reading.verse++;
+    markReading();
+    requestSync();
+  }
+  let press = null;
+  let swallowVerseClick = false;
+  document.addEventListener('pointerdown', event => {
+    const button = event.target instanceof Element && event.target.closest('.hs-chapter-scroller button[aria-pressed]');
+    const match = button?.getAttribute('aria-label')?.match(verseLabel);
+    if (!match || !event.isPrimary) return;
+    const view = button.closest('.hs-chapter-scroller');
+    press = {
+      x: event.clientX, y: event.clientY, fired: false,
+      timer: setTimeout(() => {
+        press.fired = true;
+        swallowVerseClick = true;
+        reading = { view, book: match[1], chapter: Number(match[2]), verse: Number(match[3]) };
+        markReading();
+        sync();
+      }, 500),
+    };
+  }, { capture: true });
+  const endPress = event => {
+    if (!press) return;
+    clearTimeout(press.timer);
+    // Lifting the finger counts as a tap, which lets audio start.
+    if (press.fired && event.type === 'pointerup') activateAudio();
+    press = null;
+  };
+  document.addEventListener('pointermove', event => {
+    if (press && !press.fired && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) endPress(event);
+  }, { capture: true });
+  document.addEventListener('pointerup', endPress, { capture: true });
+  document.addEventListener('pointercancel', endPress, { capture: true });
+  document.addEventListener('contextmenu', event => { if (press || swallowVerseClick) event.preventDefault(); }, { capture: true });
+  // The long press must not also save the verse.
+  document.addEventListener('click', event => {
+    if (!swallowVerseClick) return;
+    swallowVerseClick = false;
+    if (event.target instanceof Element && event.target.closest('.hs-chapter-scroller button[aria-pressed]')) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, { capture: true });
   function currentVerse() {
+    const chapterKey = readingKey();
+    if (chapterKey) return chapterKey;
     const body = [...document.querySelectorAll('.verse-body')].find(visible);
     if (!body) return null;
     return verseKey(body.previousElementSibling?.textContent || '');
@@ -275,9 +354,15 @@ async function start() {
   const tracks = await response.json();
   player = createVersePlayer({
     audio, tracks, baseURL: audioRoot, muted: state.muted,
-    onState(next) { state = next; paint(); },
+    onState(next) {
+      state = next;
+      paint();
+      // Chapter reading moves straight on to the next verse.
+      if (reading && next.phase === 'ended' && next.key === readingKey()) readNext();
+    },
     onAdvance(expectedKey) {
       if (document.hidden || currentVerse() !== expectedKey) return;
+      if (reading) { readNext(); return; }
       // The current app handles this on window only when the scroller is active.
       // Use its own navigation so filters, shuffle, favorites, and history stay intact.
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));

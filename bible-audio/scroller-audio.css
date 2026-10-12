@@ -66,3 +66,6 @@
 #bible-audio-status:empty { display: none; }
 /* Home page: half the usual 28px gap between the book and heart icons. */
 [data-bible-header-item] + [data-bible-header-item] { margin-left: -14px; }
+/* Chapter view: a long press reads from that verse; mark the verse being read. */
+.hs-chapter-scroller button[aria-pressed] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+[data-bible-reading] { border-radius: .5rem; background: rgb(0 0 0 / .05); box-shadow: 0 0 0 .5rem rgb(0 0 0 / .05); }
