@@ -20,13 +20,11 @@ if (!window[marker]) {
 
 async function start() {
   // Wait for the existing app to hydrate before adding anything to its DOM.
+  // The router removes window.$_TSR once hydration has finished.
   await new Promise(resolve => {
-    const ready = () => [...document.querySelectorAll('button[aria-label="Choose book and chapter"]')].some(button => !button.disabled);
+    const ready = () => !window.$_TSR && document.querySelector('button[aria-label="Choose book and chapter"]');
     if (ready()) { resolve(); return; }
-    const hydration = new MutationObserver(() => {
-      if (ready()) { hydration.disconnect(); resolve(); }
-    });
-    hydration.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled'] });
+    const poll = setInterval(() => { if (ready()) { clearInterval(poll); resolve(); } }, 50);
   });
   const root = new URL('./', import.meta.url);
   const audioRoot = new URL(document.querySelector('meta[name="bible-audio-base"]')?.content || '../', root);
