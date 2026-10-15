@@ -32,7 +32,7 @@ async function start() {
   const audioRoot = new URL(document.querySelector('meta[name="bible-audio-base"]')?.content || '../', root);
   const style = document.createElement('link');
   style.rel = 'stylesheet';
-  style.href = new URL('scroller-audio.css?v=read-9', root).href;
+  style.href = new URL('scroller-audio.css?v=home-row-10', root).href;
   document.head.append(style);
 
   const status = document.createElement('p');
@@ -194,7 +194,6 @@ async function start() {
   // audio clock and speaker.
   const menuIcon = icon('<path d="M4 6h16M4 12h16M4 18h16"/>');
   let menu = null;
-  const besides = new Set();
   let swallowClickUntil = 0;
   function closeMenu() {
     if (!menu) return;
@@ -248,30 +247,14 @@ async function start() {
   function mountControls() {
     if (menu && !visible(menu.toggle)) closeMenu();
     for (const header of document.querySelectorAll('header')) {
-      if (!visible(header) || header.querySelector('[data-bible-menu-toggle],[data-bible-header-item]')) continue;
+      if (!visible(header) || header.querySelector('[data-bible-menu-toggle]')) continue;
       // The existing top-right Home/book/Favorites row in every view.
       const bookButton = header.querySelector('button[aria-label="Choose book and chapter"]');
       const row = bookButton?.parentElement;
       if (!row) continue;
+      // The home page (no Home button) shows its own book and Favorites buttons.
+      if (!row.querySelector('button[aria-label="Home"]')) continue;
       row.dataset.bibleIconToolbar = '';
-      // The home page (no Home button) shows its book and Favorites buttons
-      // directly, without a menu.
-      if (!row.querySelector('button[aria-label="Home"]')) {
-        let last = row;
-        for (const original of row.querySelectorAll(':scope > button')) {
-          const beside = document.createElement('button');
-          beside.type = 'button';
-          beside.dataset.bibleHeaderItem = '';
-          beside.setAttribute('aria-label', original.getAttribute('aria-label') || '');
-          beside.title = original.title || original.getAttribute('aria-label') || '';
-          beside.innerHTML = original.querySelector('svg')?.outerHTML || '';
-          beside.addEventListener('click', () => original.click());
-          last.after(beside);
-          last = beside;
-          besides.add([beside, original]);
-        }
-        continue;
-      }
       const toggle = document.createElement('button');
       toggle.type = 'button';
       toggle.dataset.bibleMenuToggle = '';
@@ -285,11 +268,6 @@ async function start() {
         else openMenu(toggle, row);
       });
       row.after(toggle);
-    }
-    for (const pair of besides) {
-      const [beside, original] = pair;
-      if (!beside.isConnected) { besides.delete(pair); continue; }
-      if (beside.disabled !== original.disabled) beside.disabled = original.disabled;
     }
     paint();
   }
