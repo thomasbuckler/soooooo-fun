@@ -5,3 +5,5 @@
    every other page reaches the row through the menu button. */
 header .-space-x-2:not(.hs-home-row){display:none!important}
 .hs-home-row>:not(:last-child){margin-inline-start:0!important;margin-inline-end:-10px!important}
+/* b.html: keep the home page hidden until the book list has opened. */
+html.hs-toc body{visibility:hidden}
